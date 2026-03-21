@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 typedef struct transacao{
     int id;
     double valor;

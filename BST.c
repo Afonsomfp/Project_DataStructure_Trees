@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "ABP.h"
+#include "BST.h"
 #include <time.h>
 
 int n_ids;
@@ -16,8 +16,7 @@ int main(){
     no *arvore = NULL;
     FILE *fp;
 
-    fp = fopen("ABP.txt", "w");
-    fp = fopen("ABP.txt", "w");
+    fp = fopen("BST.txt", "w");
     if (fp == NULL) {
         printf("Erro ao abrir o ficheiro\n");
         return 1;
@@ -181,7 +180,7 @@ int* search(double value1, double value2, no* raiz, int risco_min, FILE *fp){
 }
 
 void free_lista(transacao *lista){
-    while (lista != NULL) {
+    while(lista != NULL) {
         transacao* tmp = lista;
         lista = lista->next;
         free(tmp);
@@ -194,7 +193,7 @@ no* eliminar(double value, no* raiz, FILE *fp){
 
     while(atual != NULL && atual->value != value){
         pai = atual;
-        if (value < atual->value){
+        if(value < atual->value){
             atual = atual->esq;
         }else{
             atual = atual->dir;
@@ -270,7 +269,7 @@ no* eliminar(double value, no* raiz, FILE *fp){
     free_lista(atual->lista);
     atual->lista = sucessor->lista;
 
-    //sucessor apenas tem 0 ou 1 filho
+    //sucessor apenas tem 0 ou 1 filho à direita
     if(pai_sucessor->esq == sucessor){
         pai_sucessor->esq = sucessor->dir;
     }else{
