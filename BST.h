@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 
 typedef struct transacao{
     int id;
@@ -21,8 +22,9 @@ typedef struct stack_no{
 
 no* creatnewno(int, double, int);
 no* insert(no*, no*);
-int* search(double, double, no*, int, FILE*);
+int* search(double, double, no*, int);
 void free_lista(transacao*);
-no* eliminar(double, no*, FILE*);
+no* eliminar(double, no*);
 void push(struct stack_no **, no*);
 no* pop(struct stack_no **);
+void print_tree(no*, const char*, bool, int, int);
