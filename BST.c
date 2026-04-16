@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "BST.h"
 #include <time.h>
+#include <string.h>
 
 int n_ids;
 
@@ -14,15 +15,6 @@ int main(){
 
     int max_value = 100000;
     no *arvore = NULL;
-    FILE *fp;
-
-    fp = fopen("BST.txt", "w");
-    if (fp == NULL) {
-        printf("Erro ao abrir o ficheiro\n");
-        return 1;
-    }
-
-    fprintf(fp, "Quantidade de transações realizadas: %d\n\n", n_ids);
 
     //fase 1
     clock_t inicio1 = clock();
@@ -35,12 +27,11 @@ int main(){
         no* novo = creatnewno(id, valor, risco);
 
         arvore = insert(novo, arvore);
-
-        fprintf(fp, "Inserir: id-%d | valor-%f | risco-%d\n", id, valor, risco);
     }
     double tempo1 = (double)(clock() - inicio1) / CLOCKS_PER_SEC;
-    fprintf(fp, "\n\nTempo de inserção: %f\n", tempo1);
     printf("Tempo de inserção: %f\n", tempo1);
+    printf("Arvore: \n");
+    print_tree(arvore, "", false, 0, 5);
 
     //fase 2
     clock_t inicio2 = clock();
@@ -55,26 +46,22 @@ int main(){
         }
 
         int risco_min = rand() % 5 + 1;
-        fprintf(fp, "\nIntervalo de procura: [%f,%f] | Risco minimo:%d\nTransições encontradas: ", v1, v2, risco_min);
-        search(v1, v2, arvore, risco_min, fp);
+        search(v1, v2, arvore, risco_min);
     }
     double tempo2 = (double)(clock() - inicio2) / CLOCKS_PER_SEC;
-    fprintf(fp, "\n\nTempo de consulta: %f\n", tempo2);
     printf("Tempo de consulta: %f\n", tempo2);
 
     //fase 3
     clock_t inicio3 = clock();
     int remover = n_ids * 0.3;
-    fprintf(fp, "\n\nQuantidade de valores a serem removido: %d\n", remover);
     for(int i = 0; i < remover; i++){
         double valor_remocao = rand() % max_value;
-        arvore = eliminar(valor_remocao, arvore, fp);
+        arvore = eliminar(valor_remocao, arvore);
     }
     double tempo3 = (double)(clock() - inicio3) / CLOCKS_PER_SEC;
-    fprintf(fp, "\n\nTempo de remoção: %f\n", tempo3);
     printf("Tempo de remoção: %f\n", tempo3);
-
-    fclose(fp);
+    printf("Arvore: \n");
+    print_tree(arvore, "", false, 0, 5);
 
     return 0;
 }
@@ -145,7 +132,7 @@ no* pop(struct stack_no **p){
     return reply; 
 }
  
-int* search(double value1, double value2, no* raiz, int risco_min, FILE *fp){
+int* search(double value1, double value2, no* raiz, int risco_min){
     int *valores_intervalo = (int*)malloc(sizeof(int)*n_ids); 
     int i = 0;
 
@@ -170,7 +157,6 @@ int* search(double value1, double value2, no* raiz, int risco_min, FILE *fp){
             while(tmp != NULL) {
                 if(tmp->risco >= risco_min){
                     valores_intervalo[i++] = tmp->id;
-                    fprintf(fp, "ID - %d\n", tmp->id);
                 }
                 tmp = tmp->next;
             }
@@ -187,7 +173,7 @@ void free_lista(transacao *lista){
     }
 }
 
-no* eliminar(double value, no* raiz, FILE *fp){ 
+no* eliminar(double value, no* raiz){ 
     no* atual = raiz;
     no* pai = NULL;
 
@@ -201,14 +187,12 @@ no* eliminar(double value, no* raiz, FILE *fp){
     }
 
     if(atual == NULL){
-        fprintf(fp, "\nTal valor não foi encontrado: %f\n", value);
         return raiz; 
     }
 
     //caso em que não tem filhos
     if(atual->esq == NULL && atual->dir == NULL){
         if(pai == NULL) { //é a raiz
-            fprintf(fp, "Valor eliminado - %f\n", value);
             free_lista(atual->lista);
             free(atual);
             return NULL;
@@ -219,7 +203,6 @@ no* eliminar(double value, no* raiz, FILE *fp){
             pai->dir = NULL;
         }
 
-        fprintf(fp, "Valor eliminado - %f\n", value);
         free_lista(atual->lista);
         free(atual);
         return raiz;
@@ -237,7 +220,6 @@ no* eliminar(double value, no* raiz, FILE *fp){
         }
 
         if(pai == NULL) { //é a raiz
-            fprintf(fp, "Valor eliminado - %f\n", value);
             free_lista(atual->lista);
             free(atual);
             return filho;
@@ -248,7 +230,6 @@ no* eliminar(double value, no* raiz, FILE *fp){
         }else{
             pai->dir = filho;
         }
-        fprintf(fp, "Valor eliminado - %f\n", value);
         free_lista(atual->lista);
         free(atual);
         return raiz;
@@ -265,7 +246,6 @@ no* eliminar(double value, no* raiz, FILE *fp){
 
     atual->value = sucessor->value;
 
-    fprintf(fp, "Valor eliminado - %f\n", value);
     free_lista(atual->lista);
     atual->lista = sucessor->lista;
 
@@ -278,4 +258,29 @@ no* eliminar(double value, no* raiz, FILE *fp){
     free(sucessor);
 
     return raiz;
+}
+
+void print_tree(no* raiz, const char* prefixo, bool isLeft, int nivel, int max_nivel){
+    if(raiz == NULL || nivel > max_nivel){
+        return;
+    }
+    printf("%s", prefixo);
+    if(isLeft){
+        printf("├──");
+    }else{
+        printf("└──");
+    }
+
+    printf("%0.0f\n", raiz->value); 
+
+    char novoPrefixo[256];
+    strcpy(novoPrefixo, prefixo);
+
+    if(isLeft){
+        strcat(novoPrefixo, "│   ");
+    }else{
+        strcat(novoPrefixo, "    ");
+    }
+    print_tree(raiz->dir, novoPrefixo, false, nivel+1, max_nivel);
+    print_tree(raiz->esq, novoPrefixo, true, nivel+1, max_nivel);
 }
