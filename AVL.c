@@ -4,8 +4,9 @@
 #include "AVL.h"
 #include <time.h>
 #include <stdbool.h>
+#include <string.h>
 
-int n_ids;
+int n_ids, n_rot_ins, n_rot_rem;
 
 int main(){
     srand(time(NULL));
@@ -13,17 +14,11 @@ int main(){
     printf("Insira a quantidade de transações desejadas: ");
     scanf("%d", &n_ids);
 
+    n_rot_ins = 0;
+    n_rot_rem = 0;
+
     int max_value = 100000;
     no *arvore = NULL;
-    FILE *fp;
-
-    fp = fopen("AVL.txt", "w");
-    if (fp == NULL) {
-        printf("Erro ao abrir o ficheiro\n");
-        return 1;
-    }
-
-    fprintf(fp, "Quantidade de transações realizadas: %d\n\n", n_ids);
 
     //fase 1
     clock_t inicio1 = clock();
@@ -36,12 +31,11 @@ int main(){
         no* novo = creatnewno(id, valor, risco);
 
         arvore = insert(novo, arvore);
-
-        fprintf(fp, "Inserir: id-%d | valor-%f | risco-%d\n", id, valor, risco);
     }
     double tempo1 = (double)(clock() - inicio1) / CLOCKS_PER_SEC;
-    fprintf(fp, "\n\nTempo de inserção: %f\n", tempo1);
-    printf("Tempo de inserção: %f\n", tempo1);
+    printf("Tempo de inserção: %f | Numero de rotaçoes: %d\n", tempo1, n_rot_ins);
+    printf("Arvore: \n");
+    print_tree(arvore, "", false, 0, 5);
 
     //fase 2
     clock_t inicio2 = clock();
@@ -56,33 +50,26 @@ int main(){
             v1 = v2;
             v2 = tmp;
         }
-
-        int risco_min = rand() % 5 + 1;
-        fprintf(fp, "\nIntervalo de procura: [%f,%f] | Risco minimo:%d\nTransições encontradas: ", v1, v2, risco_min);
-        k = 0;
-        search(v1, v2, arvore, risco_min, fp, valores_intervalo, &k);
         
-        for (int j = 0; j < k; j++) {
-            fprintf(fp, "%d ", valores_intervalo[j]);
-        }
+        int risco_min = rand() % 5 + 1;
+        k = 0;
+        search(v1, v2, arvore, risco_min, valores_intervalo, &k);
+        
     }
     double tempo2 = (double)(clock() - inicio2) / CLOCKS_PER_SEC;
-    fprintf(fp, "\n\nTempo de consulta: %f\n", tempo2);
     printf("Tempo de consulta: %f\n", tempo2);
 
     //fase 3
     clock_t inicio3 = clock();
     int remover = n_ids * 0.3;
-    fprintf(fp, "\n\nQuantidade de valores a serem removido: %d\n", remover);
     for(int i = 0; i < remover; i++){
         double valor_remocao = rand() % max_value;
-        arvore = eliminar(valor_remocao, arvore, fp);
+        arvore = eliminar(valor_remocao, arvore);
     }
     double tempo3 = (double)(clock() - inicio3) / CLOCKS_PER_SEC;
-    fprintf(fp, "\n\nTempo de remoção: %f\n", tempo3);
-    printf("Tempo de remoção: %f\n", tempo3);
-
-    fclose(fp);
+    printf("Tempo de remoção: %f | Numero de rotaçoes: %d\n", tempo3, n_rot_rem);
+    printf("Arvore: \n");
+    print_tree(arvore, "", false, 0, 5);
 
     return 0;
 }
@@ -183,13 +170,17 @@ no* insert(no* novo, no* raiz){
     int val = defAltura(raiz, true);
 
     if(val > 1 && novo->value < raiz->esq->value){
+        n_rot_ins++;
         return rotacaoDireita(raiz);
     }else if(val < -1 && novo->value > raiz->dir->value){
+        n_rot_ins++;
         return rotacaoEsquerda(raiz);
     }else if(val > 1 && novo->value > raiz->esq->value){
+        n_rot_ins += 2;
         raiz->esq = rotacaoEsquerda(raiz->esq);
         return rotacaoDireita(raiz);
     }else if(val < -1 && novo->value < raiz->dir->value){
+        n_rot_ins += 2;
         raiz->dir = rotacaoDireita(raiz->dir);
         return rotacaoEsquerda(raiz);
     }
@@ -197,13 +188,13 @@ no* insert(no* novo, no* raiz){
     return raiz;
 }
 
-void search(double value1, double value2, no* raiz, int risco_min, FILE *fp, int* valores_intervalo, int* i){
+void search(double value1, double value2, no* raiz, int risco_min, int* valores_intervalo, int* i){
     if(raiz == NULL){
         return;
     }
 
     if(raiz->value > value1){
-        search(value1, value2, raiz->esq, risco_min, fp, valores_intervalo, i);
+        search(value1, value2, raiz->esq, risco_min, valores_intervalo, i);
     }
 
     if(raiz->value >= value1 && raiz->value <= value2) {
@@ -217,7 +208,7 @@ void search(double value1, double value2, no* raiz, int risco_min, FILE *fp, int
     }
 
     if(raiz->value < value2){
-        search(value1, value2, raiz->dir, risco_min, fp, valores_intervalo, i);
+        search(value1, value2, raiz->dir, risco_min, valores_intervalo, i);
     }
 }
 
@@ -229,42 +220,48 @@ void free_lista(transacao *lista){
     }
 }
 
-no* eliminar(double value, no* raiz, FILE *fp){ 
+no* eliminar(double value, no* raiz){ 
     if(raiz == NULL){
-        fprintf(fp, "\nTal valor nao foi encontrado: %f\n", value);
         return NULL;
     }
 
     if(value < raiz->value){
-        raiz->esq = eliminar(value, raiz->esq, fp);
+        raiz->esq = eliminar(value, raiz->esq);
     }else if(value > raiz->value){
-        raiz->dir = eliminar(value, raiz->dir, fp);
+        raiz->dir = eliminar(value, raiz->dir);
     }else{
-        fprintf(fp, "Valor eliminado - %f\n", value);
-        free_lista(raiz->lista);
-
         //caso em que não tem filhos
         if(raiz->esq == NULL && raiz->dir == NULL){
+            free_lista(raiz->lista);
             free(raiz);
             return NULL;
         }
 
         //caso em que tem um filho
         if(raiz->esq == NULL || raiz->dir == NULL){
-            no* filho = (raiz->esq != NULL ? raiz->esq : raiz->dir);
+            no* filho;
+            if(raiz->esq != NULL){
+                filho = raiz->esq;
+            }else{
+                filho = raiz->dir;
+            }
+            free_lista(raiz->lista);
             free(raiz);
             return filho;
         }
 
         //caso em que tem dois filhos
         no* sucessor = raiz->dir;
-        while(sucessor->esq != NULL)
+        while(sucessor->esq != NULL){
             sucessor = sucessor->esq;
+        }
 
         raiz->value = sucessor->value;
+        free_lista(raiz->lista);
         raiz->lista = sucessor->lista;
+        sucessor->lista = NULL;
 
-        raiz->dir = eliminar(sucessor->value, raiz->dir, fp);
+        raiz->dir = eliminar(sucessor->value, raiz->dir);
     }
 
     defAltura(raiz, false);
@@ -272,16 +269,45 @@ no* eliminar(double value, no* raiz, FILE *fp){
     int val = defAltura(raiz, true);
 
     if(val > 1 && defAltura(raiz->esq, true) >= 0){
+        n_rot_rem++;
         return rotacaoDireita(raiz);
     }else if(val < -1 && defAltura(raiz->dir, true) <= 0){
+        n_rot_rem++;
         return rotacaoEsquerda(raiz);
     }else if(val > 1 && defAltura(raiz->esq, true) < 0){
+        n_rot_rem += 2;
         raiz->esq = rotacaoEsquerda(raiz->esq);
         return rotacaoDireita(raiz);
     }else if(val < -1 && defAltura(raiz->dir, true) > 0){
+        n_rot_rem += 2;
         raiz->dir = rotacaoDireita(raiz->dir);
         return rotacaoEsquerda(raiz);
     }
 
     return raiz;
+}
+
+void print_tree(no* raiz, const char* prefixo, bool isLeft, int nivel, int max_nivel){
+    if(raiz == NULL || nivel > max_nivel){
+        return;
+    }
+    printf("%s", prefixo);
+    if(isLeft){
+        printf("├──");
+    }else{
+        printf("└──");
+    }
+
+    printf("%0.0f\n", raiz->value); 
+
+    char novoPrefixo[256];
+    strcpy(novoPrefixo, prefixo);
+
+    if(isLeft){
+        strcat(novoPrefixo, "│   ");
+    }else{
+        strcat(novoPrefixo, "    ");
+    }
+    print_tree(raiz->dir, novoPrefixo, false, nivel+1, max_nivel);
+    print_tree(raiz->esq, novoPrefixo, true, nivel+1, max_nivel);
 }
